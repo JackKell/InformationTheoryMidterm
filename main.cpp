@@ -1,12 +1,14 @@
+// includes
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
 #include <cmath>
 #include <map>
-#include <streambuf>
 #include <vector>
 #include <algorithm>
+#include <regex>
 
+// using statements
 using std::unordered_map;
 using std::map;
 using std::ofstream;
@@ -22,6 +24,13 @@ using std::log2;
 using std::istreambuf_iterator;
 using std::vector;
 using std::find;
+using std::regex;
+using std::sregex_token_iterator;
+using std::smatch;
+using std::regex_match;
+using std::regex_replace;
+using std::sort;
+using std::pair;
 
 void cleanTextFile(string inputPath, string outputPath) {
     // open the input file
@@ -51,18 +60,18 @@ void cleanTextFile(string inputPath, string outputPath) {
     outputFile.close();
 }
 
-map<string, int> getFrequency(string input, int nGrams = 1) {
-    map<string, int> nGramAlphabetMap;
-    for (int i = 0; i < input.length(); i += nGrams) {
+map<string, int> getFrequency(string input, const unsigned long nGrams = 1) {
+    map<string, int> frequency;
+    for (unsigned int i = 0; i < input.length(); i += nGrams) {
         const string nGram = input.substr(i, nGrams);
-        nGramAlphabetMap[nGram] += 1;
+        frequency[nGram] += 1;
     }
-    return nGramAlphabetMap;
+    return frequency;
 }
 
 int getTotalOccurrences(map<string, int> frequency) {
     int total = 0;
-    for (auto element: frequency) {
+    for (const auto& element: frequency) {
         total += element.second;
     }
     return total;
@@ -73,14 +82,14 @@ float getEntropy(map<string, int> frequency) {
 
     const int total = getTotalOccurrences(frequency);
 
-    for (auto element: frequency) {
+    for (const auto& element: frequency) {
         float probabilityOfElement = element.second / (float) total;
         entropy += probabilityOfElement * log2(probabilityOfElement);
     }
     return -1 * entropy;
 }
 
-string lempelZivEncoding(string input) {
+string lempelZivEncoding(const string input) {
     // the string representing the final compressed encoding
     string encoding = "";
     // the list of unique strings that have appeared in the list
@@ -130,9 +139,38 @@ string lempelZivEncoding(string input) {
     return encoding;
 }
 
-void lempelZivDecoding(string input) {
-
+vector<string> split(string input, const regex regexPattern) {
+    vector<string> matches;
+    smatch sm;
+    while(regex_search(input, sm, regexPattern)) {
+        if(sm.str() == "")
+            break;
+        matches.push_back(sm.str());
+        input = sm.suffix();
+    }
+    return matches;
 }
+
+string lempelZivDecoding(const string input) {
+    const regex lempelZivRegexPattern = regex("(\\d*\\D?)");
+    const regex numberPattern = regex("\\d+.*");
+    const regex numberMather = regex("\\d+");
+    const vector<string> encodingList = split(input, lempelZivRegexPattern);
+    string decoding = "";
+
+    for (unsigned int i = 0; i < encodingList.size(); i++) {
+        smatch match;
+        string partialDecoding = encodingList.at(i);
+        while (regex_match(partialDecoding, match, numberPattern)) {
+            const string indexAsString = match.str();
+            const unsigned long index = (const unsigned long) stoi(indexAsString);
+            partialDecoding = regex_replace(partialDecoding, numberMather, encodingList.at(index));
+        }
+        decoding += partialDecoding;
+    }
+    return decoding;
+}
+
 
 void huffmanEncoding(string input) {
 
@@ -140,6 +178,70 @@ void huffmanEncoding(string input) {
 
 void huffmanDecoding() {
 
+}
+
+//tree implementation referenced form http://math.hws.edu/javanotes/c9/s4.html and https://gist.github.com/mgechev/5911348
+struct Node {
+    int frequency;
+    string value;
+    Node* left;
+    Node* right;
+
+    Node(int frequency, string value) {
+        Node(frequency, value, nullptr, nullptr);
+    }
+
+    Node(int frequency, string value, Node* left, Node* right) {
+        this->frequency = frequency;
+        this->value = value;
+        this->left = left;
+        this->right = right;
+    };
+};
+
+class HuffmanTree {
+private:
+    Node *root;
+    int codebook;
+
+    void addLeaf() {
+        if (root) {
+
+        } else {
+
+        }
+    }
+
+public:
+    HuffmanTree(map<string, int> frequency);
+};
+
+// function reference http://stackoverflow.com/questions/279854/how-do-i-sort-a-vector-of-pairs-based-on-the-second-element-of-the-pair
+HuffmanTree::HuffmanTree(map<string, int> frequency) {
+    vector<pair<string, int>> sortedFrequency;
+    for (auto element: frequency) {
+        cout << element.first << " " << element.second << "\n";
+        sortedFrequency.push_back(pair<string, int>(element.first, element.second));
+    }
+    sort(sortedFrequency.begin(), sortedFrequency.end(), [](
+            const pair<string, int> &left,
+            const pair<string, int> &right) {
+        return left.second > right.second;
+    });
+    for (unsigned int i = 0; i < sortedFrequency.size(); i++) {
+        pair<string, int> currentFrequency = (pair<string, int> &&) sortedFrequency.at(i);
+        if (root) {
+            if (root->left) {
+
+            } else if (root->right) {
+
+            } else {
+
+            }
+        } else {
+
+        }
+    }
 }
 
 int main() {
@@ -164,10 +266,33 @@ int main() {
 //    for (auto element: frequency) {
 //        cout << element.first << " " << element.second << "\n";
 //    }
-//    cout << getEntropy(frequency);
+//    cout << getEntropy(frequency) << "\n";
 
-    string test = "Hello My name is Brandon Olson and I am here to party!!!";
-    cout << test << "\n";
-    cout << lempelZivEncoding(test) << "\n";
-    return 0;
+//    // Lempel Ziv Test
+//    cout << "Input:\n";
+//    string test = "aaabbbaaaaaaaaabababababababba";
+//    cout << test << "\n\n";
+//
+//    cout << "Compressed:\n";
+//    string compressed = lempelZivEncoding(test);
+//    cout << compressed << "\n\n";
+//
+//    cout << "Decompressed:\n";
+//    string decompressed = lempelZivDecoding(compressed);
+//    cout << decompressed << "\n\n";
+
+    map<string, int> frequency = getFrequency("aasdfaascdcs");
+    vector<pair<string, int>> x;
+    for (auto element: frequency) {
+        cout << element.first << " " << element.second << "\n";
+        x.push_back(pair<string, int>(element.first, element.second));
+    }
+    sort(x.begin(), x.end(), [](const pair<string, int> &left, const pair<string, int> &right) {
+        return left.second > right.second;
+    });
+    cout << "\n";
+    for (auto element: x) {
+        cout << element.first << " " << element.second << "\n";
+    }
+    cout << getEntropy(frequency) << "\n";
 }
