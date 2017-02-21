@@ -1,16 +1,15 @@
 // includes
 #include <iostream>
 #include <fstream>
-#include <unordered_map>
 #include <cmath>
 #include <map>
 #include <vector>
 #include <algorithm>
 #include <regex>
 #include <iomanip>
+#include "HuffmanTree.h"
 
 // using statements
-using std::unordered_map;
 using std::map;
 using std::ofstream;
 using std::ios;
@@ -22,16 +21,15 @@ using std::tolower;
 using std::stoi;
 using std::to_string;
 using std::log2;
-using std::istreambuf_iterator;
 using std::vector;
 using std::find;
 using std::regex;
-using std::sregex_token_iterator;
 using std::smatch;
 using std::regex_match;
 using std::regex_replace;
 using std::sort;
 using std::pair;
+using std::istreambuf_iterator;
 
 void cleanTextFile(string inputPath, string outputPath) {
     // open the input file
@@ -90,6 +88,18 @@ float getEntropy(map<string, int> frequency) {
     return -1 * entropy;
 }
 
+vector<string> split(string input, const regex regexPattern) {
+    vector<string> matches;
+    smatch sm;
+    while(regex_search(input, sm, regexPattern)) {
+        if(sm.str() == "")
+            break;
+        matches.push_back(sm.str());
+        input = sm.suffix();
+    }
+    return matches;
+}
+
 string lempelZivEncoding(const string input) {
     // the string representing the final compressed encoding
     string encoding = "";
@@ -140,18 +150,6 @@ string lempelZivEncoding(const string input) {
     return encoding;
 }
 
-vector<string> split(string input, const regex regexPattern) {
-    vector<string> matches;
-    smatch sm;
-    while(regex_search(input, sm, regexPattern)) {
-        if(sm.str() == "")
-            break;
-        matches.push_back(sm.str());
-        input = sm.suffix();
-    }
-    return matches;
-}
-
 string lempelZivDecoding(const string input) {
     const regex lempelZivRegexPattern = regex("(\\d*\\D?)");
     const regex numberPattern = regex("\\d+.*");
@@ -172,150 +170,7 @@ string lempelZivDecoding(const string input) {
     return decoding;
 }
 
-//tree implementation referenced form http://math.hws.edu/javanotes/c9/s4.html and https://gist.github.com/mgechev/5911348
-class Node {
-public:
-    int frequency;
-    string value;
-    Node* left;
-    Node* right;
-
-    Node(int frequency, string value = "", Node* left = nullptr, Node* right = nullptr) {
-        this->frequency = frequency;
-        this->value = value;
-        this->left = left;
-        this->right = right;
-    };
-
-    ~Node() {
-        delete left;
-        delete right;
-    }
-};
-
-class HuffmanTree {
-public:
-    Node *root = nullptr;
-    HuffmanTree(map<string, int> frequency);
-    ~HuffmanTree() {
-        delete root;
-    }
-    void print(Node* node, int indent=0);
-    static void getCodebook(Node* node, string code, map<string, string>& codebook);
-    map<string, string> getDecodebook();
-};
-
-// function reference http://stackoverflow.com/questions/279854/how-do-i-sort-a-vector-of-pairs-based-on-the-second-element-of-the-pair
-HuffmanTree::HuffmanTree(map<string, int> frequency) {
-    vector<pair<string, int>> sortedFrequency;
-    for (auto element: frequency) {
-        cout << element.first << " " << element.second << "\n";
-        sortedFrequency.push_back(pair<string, int>(element.first, element.second));
-    }
-    sort(sortedFrequency.begin(), sortedFrequency.end(), [](
-            const pair<string, int> &left,
-            const pair<string, int> &right) {
-        return left.second < right.second;
-    });
-
-    int max = sortedFrequency.back().second;
-    for (unsigned int i = 0; i < sortedFrequency.size(); i++) {
-        pair<string, int> currentFrequency = (pair<string, int> &&) sortedFrequency.at(i);
-        if (root) {
-            if (!(root->right)) {
-                root->right = new Node(currentFrequency.second, currentFrequency.first);
-                root->frequency += currentFrequency.second;
-            } else {
-                if (root->frequency <= max) {
-                    Node* newLeftNode = new Node(currentFrequency.second, currentFrequency.first);
-                    Node* newRootNode = new Node(root->frequency + currentFrequency.second, "", newLeftNode, root);
-                    root = newRootNode;
-                } else {
-                    const unsigned long remainingElements = sortedFrequency.size() - i;
-                    if (remainingElements == 1) {
-                        Node* newLeftNode = new Node(currentFrequency.second, currentFrequency.first);
-                        Node* newRootNode = new Node(root->frequency + currentFrequency.second, "", newLeftNode, root);
-                        root = newRootNode;
-                    } else if (remainingElements == 2) {
-                        Node* newSubTreeLeftNode = new Node(currentFrequency.second, currentFrequency.first);
-                        pair<string, int> nextFrequency = (pair<string, int> &&) sortedFrequency.at(i + 1);
-                        i++;
-                        Node* newSubTreeRightNode = new Node(nextFrequency.second, nextFrequency.first);
-                        Node* newSubTreeRootNode = new Node(currentFrequency.second + nextFrequency.second, "", newSubTreeLeftNode, newSubTreeRightNode);
-                        Node* newRootNode = new Node(newSubTreeRootNode->frequency + root->frequency, "", newSubTreeRootNode, root);
-                        root = newRootNode;
-                    } else { //if (remainingElements >= 3){
-                        Node* subTreeLeftNode = new Node(currentFrequency.second, currentFrequency.first);
-                        pair<string, int> nextFrequency = (pair<string, int> &&) sortedFrequency.at(i + 1);
-                        i++;
-                        Node* subTreeRightNode = new Node(nextFrequency.second, nextFrequency.first);
-                        Node* subTreeRootNode = new Node(currentFrequency.second + nextFrequency.second, "", subTreeLeftNode, subTreeRightNode);
-                        pair<string, int> nextNextFrequency = (pair<string, int> &&) sortedFrequency.at(i + 2);
-                        i++;
-                        Node* newLeftNode = new Node(nextNextFrequency.second, nextNextFrequency.first);
-                        if (subTreeRootNode->frequency < root->frequency) {
-                            Node* newSubTreeRootNode = new Node(nextFrequency.second + subTreeRootNode->frequency, "", newLeftNode, subTreeRootNode);
-                            subTreeRootNode = newSubTreeRootNode;
-                        } else {
-                            Node* newRootNode = new Node(nextFrequency.second + root->frequency, "", newLeftNode, root);
-                            root = newRootNode;
-                        }
-                        Node* newRootNode = new Node(subTreeRootNode->frequency + root->frequency, "", subTreeRootNode, root);
-                        root = newRootNode;
-                    }
-                }
-            }
-        } else {
-            root = new Node(currentFrequency.second, "", new Node(currentFrequency.second, currentFrequency.first));
-        }
-    }
-}
-
-void HuffmanTree::print(Node* node, int indent) {
-    if(node != nullptr) {
-        if(node->left) {
-            print(node->left, indent + 6);
-        }
-        if(node->right) {
-            print(node->right, indent + 6);
-        }
-        if (indent) {
-            std::cout << std::setw(indent) << ' ';
-        }
-        cout<< node->value << " : " << node->frequency << "\n ";
-    }
-}
-
-void HuffmanTree::getCodebook(Node* node, string code, map<string, string>& codebook) {
-    if(node != nullptr) {
-        if(!(node->left && node->right)) {
-            codebook[node->value] = code;
-        } else {
-            if (node->left) {
-                getCodebook(node->left, code + "0", codebook);
-            }
-            if (node->right) {
-                getCodebook(node->right, code + "1", codebook);
-            }
-        }
-    }
-}
-
-map<string, string> HuffmanTree::getDecodebook() {
-    map<string, string> codebook;
-    map<string, string> decodebook;
-    getCodebook(root, "", codebook);
-    for (auto element : codebook) {
-        decodebook[element.second] = element.first;
-    }
-    return decodebook;
-}
-
-string huffmanEncoding(string input) {
-    map<string, int> frequency = getFrequency(input);
-    HuffmanTree huffmanTree = HuffmanTree(frequency);
-    map<string, string> codebook;
-    huffmanTree.getCodebook(huffmanTree.root, "", codebook);
+string huffmanEncoding(string input, map<string, string> codebook) {
     string encoding = "";
     for (char x : input) {
         encoding += codebook.at(string(1, x));
@@ -339,8 +194,9 @@ string huffmanDecoding(string input, map<string, string> decodebook) {
     return decoding;
 }
 
-int main() {
-//    cout << "Starting Information Theory Midterm\n";
+
+void testing() {
+    cout << "Starting Information Theory Midterm\n";
 //    string inputPath = "text/tom.txt";
 //    string outputPath = "text/tom-clean.txt";
 //
@@ -391,27 +247,128 @@ int main() {
 //    }
 //    cout << getEntropy(frequency) << "\n";
 
-    HuffmanTree huffmanTree = HuffmanTree(frequency);
-    huffmanTree.print(huffmanTree.root);
-    map<string, string> codebook;
-    huffmanTree.getCodebook(huffmanTree.root, "", codebook);
-    cout << "\nCodebook\n";
-    for (auto element : codebook) {
-        cout << element.first << " " << element.second << "\n";
+//    HuffmanTree huffmanTree = HuffmanTree(frequency);
+//    huffmanTree.print();
+//    map<string, string> codebook;
+//    huffmanTree.getCodebook(huffmanTree.root, "", codebook);
+//    cout << "\nCodebook\n";
+//    for (auto element : codebook) {
+//        cout << element.first << " " << element.second << "\n";
+//    }
+//
+//    for (auto element : huffmanTree.getDecodebook()) {
+//        cout << element.first << " " << element.second << "\n";
+//    }
+//
+//    string input = "aasdfaascdcs";
+//    cout << "Input: " << "\n";
+//    cout << input << "\n";
+//    cout << "Compressed: " << "\n";
+//    string compressed = huffmanEncoding(input);
+//    cout << compressed << "\n";
+//    cout << "Decompressed: " << "\n";
+//    string decompressed = huffmanDecoding(compressed, huffmanTree.getDecodebook());
+//    cout << decompressed << "\n";
+}
+
+string getTextFromFile(string filepath) {
+    // open the input file
+    ifstream inputTextFile(filepath, ios::in|ios::ate);
+
+    // create a string buffer to hold the new output file
+    string outputData;
+    outputData.reserve((unsigned int) inputTextFile.tellg());
+
+    // set the file pointer back to the beginning
+    inputTextFile.seekg(ios::beg);
+
+    string currentLine;
+    while (getline(inputTextFile, currentLine)) {
+        outputData += currentLine;
     }
+    inputTextFile.close();
+    return outputData;
+}
 
-    for (auto element : huffmanTree.getDecodebook()) {
-        cout << element.first << " " << element.second << "\n";
+void printFrequency(map<string, int> frequency) {
+    for (const auto& element : frequency) {
+        cout << element.first << ", " << element.second << "\n";
     }
+    cout << "\n";
+}
 
-    string input = "aasdfaascdcs";
-    cout << "Input: " << "\n";
-    cout << input << "\n";
-    cout << "Compressed: " << "\n";
-    string compressed = huffmanEncoding(input);
-    cout << compressed << "\n";
-    cout << "Decompressed: " << "\n";
-    string decompressed = huffmanDecoding(compressed, huffmanTree.getDecodebook());
-    cout << decompressed << "\n";
+int main() {
+    cout << "Starting Information Theory Midterm\n\n";
+    string inputPath = "text/tom.txt";
+    string outputPath = "text/tom-clean.txt";
 
+    cout << "Cleaning Text File " << inputPath << "\n\n";
+    cleanTextFile(inputPath, outputPath);
+    cout << "Cleaned Text File " << inputPath << " to " << outputPath << "\n\n";
+
+    // Clean Tom Text
+    cout << "Retrieving Cleaned Text File\n\n";
+    string tomCleanText = getTextFromFile(outputPath);
+    //tomCleanText = "aaaaaaaaabbbbbbbbbbbbbbbbbbccccccccc";
+
+    // Frequency Calculations
+    cout << "Calculating Frequencies\n\n";
+    map<string, int> tomSingleCharacterFrequency = getFrequency(tomCleanText, 1);
+    map<string, int> tomBiGramFrequency = getFrequency(tomCleanText, 2);
+    map<string, int> tomTriGramFrequency = getFrequency(tomCleanText, 3);
+
+
+    // Entropy Calculations
+    cout << "Calculating Entropies\n\n";
+    float tomSingleCharacterEntropy = getEntropy(tomSingleCharacterFrequency);
+    float tomBiGramEntropy = getEntropy(tomBiGramFrequency);
+    float tomTriGramEntropy = getEntropy(tomTriGramFrequency);
+
+    cout << "Single Character Frequency:\n";
+    printFrequency(tomSingleCharacterFrequency);
+
+    cout << "Entropies\n";
+    cout << "Single Character Entropy : " << tomSingleCharacterEntropy << " bits per character\n";
+    cout << "Bigram Entropy           : " << tomBiGramEntropy << " bits per bigram\n";
+    cout << "TriGram Entropy          : " << tomTriGramEntropy << " bits per trigram\n\n";
+
+    HuffmanTree tomHuffmanTree = HuffmanTree(tomSingleCharacterFrequency);
+    cout << "Huffman Tree:\n";
+    tomHuffmanTree.print();
+    cout << "\n";
+    map<string, string> codebook = tomHuffmanTree.getCodebook();
+    map<string, string> decodebook = tomHuffmanTree.getDecodebook();
+    string tomHuffmanEncoded = huffmanEncoding(tomCleanText, codebook);
+    string tomHuffmanDecoded = huffmanDecoding(tomHuffmanEncoded, decodebook);
+    cout << "Codebook:\n";
+    tomHuffmanTree.printCodeBook();
+    cout << "\n";
+
+    if (tomCleanText.length() > 50) {
+        cout << "Note: The input was to long to display fully here.\n";
+        cout << "Input   : " << tomCleanText.substr(0, 50) << "...\n";
+        cout << "Encoded : " << tomHuffmanEncoded.substr(0, 50) << "...\n";
+        cout << "Decoded : " << tomHuffmanDecoded.substr(0, 50) << "...\n";
+    } else {
+        cout << "Input   : " << tomCleanText << "\n";
+        cout << "Encoded : " << tomHuffmanEncoded << "\n";
+        cout << "Decoded : " << tomHuffmanDecoded << "\n";
+    }
+    cout << "\n";
+
+    unsigned long inputSize = tomCleanText.length() * 8;
+    unsigned long encodedSize = tomHuffmanEncoded.length();
+    double compressionRatio = (double) encodedSize / (double) inputSize;
+    float encodedEntropy = getEntropy(getFrequency(tomHuffmanEncoded));
+    cout << "Huffman Data:\n";
+    cout << "Input Size         : " << inputSize << " bits\n";
+    cout << "Encoded Size       : " << encodedSize << " bits\n";
+    cout << "Compression Ratio  : " << compressionRatio << "\n";
+    cout << "Input Entropy      : " << tomSingleCharacterEntropy << " bits per character\n";
+    cout << "Encoded Entropy    : " << encodedEntropy << "bits per character\n";
+    cout << "Compression Time   : " << "\n";
+    cout << "Decompression Time : " << "\n";
+    cout << "\n";
+
+    cout << "Hey I did not crash\n";
 }
