@@ -31,7 +31,9 @@ using std::regex_replace;
 using std::sort;
 using std::pair;
 using std::istreambuf_iterator;
+using std::endl;
 
+// cleans the text found in one file and places the results in an output file
 void cleanTextFile(string inputPath, string outputPath) {
     // open the input file
     ifstream inputTextFile(inputPath, ios::in|ios::ate);
@@ -60,6 +62,7 @@ void cleanTextFile(string inputPath, string outputPath) {
     outputFile.close();
 }
 
+// cleans a single string
 string cleanText(string input) {
     string output;
     for(char& x : input) {
@@ -70,12 +73,14 @@ string cleanText(string input) {
     return output;
 }
 
+// writes a string to a given file
 void writeStringToFile(string outputPath, string outputData) {
     ofstream outputFile(outputPath, ios::trunc);
     outputFile << outputData << "\n";
     outputFile.close();
 }
 
+// returns a map with strings as keys and int number of occurrences
 map<string, int> getFrequency(string input, const unsigned long nGrams = 1) {
     map<string, int> frequency;
     for (unsigned int i = 0; i < input.length(); i += nGrams) {
@@ -85,6 +90,7 @@ map<string, int> getFrequency(string input, const unsigned long nGrams = 1) {
     return frequency;
 }
 
+// returns the total number of occurrences for all keys in the map
 int getTotalOccurrences(map<string, int> frequency) {
     int total = 0;
     for (const auto& element: frequency) {
@@ -93,6 +99,7 @@ int getTotalOccurrences(map<string, int> frequency) {
     return total;
 }
 
+// returns the entropy of the given frequency
 float getEntropy(map<string, int> frequency) {
     float entropy = 0.0f;
 
@@ -105,6 +112,7 @@ float getEntropy(map<string, int> frequency) {
     return -1 * entropy;
 }
 
+// returns teh relative entropy of the two given frequencies
 float getRelativeEntropy(map<string, int> frequencyP, map<string, int> frequencyQ) {
     float relativeEntropy = 0.0f;
     const float totalP = getTotalOccurrences(frequencyP);
@@ -115,11 +123,12 @@ float getRelativeEntropy(map<string, int> frequencyP, map<string, int> frequency
         const int currentPOccurrences = tempOccurence;
         const float probabilityP = currentPOccurrences / totalP;
         const float probabilityQ = currentQOccurrences / totalQ;
-        relativeEntropy += probabilityP * (probabilityP / probabilityQ);
+        relativeEntropy += probabilityP * log2(probabilityP / probabilityQ);
     }
     return relativeEntropy;
 }
 
+// returns all the matches in a string based on a regex pattern
 vector<string> split(string input, const regex regexPattern) {
     vector<string> matches;
     smatch sm;
@@ -132,6 +141,7 @@ vector<string> split(string input, const regex regexPattern) {
     return matches;
 }
 
+// returns a lempel ziv encoded string
 string lempelZivEncoding(const string input) {
     // the string representing the final compressed encoding
     string encoding = "";
@@ -182,6 +192,7 @@ string lempelZivEncoding(const string input) {
     return encoding;
 }
 
+// returns a decoded lempel ziv encoded string
 string lempelZivDecoding(const string input) {
     const regex lempelZivRegexPattern = regex("(\\d*\\D?)");
     const regex numberPattern = regex("\\d+.*");
@@ -202,6 +213,7 @@ string lempelZivDecoding(const string input) {
     return decoding;
 }
 
+// returns a huffman encoded string when given a huffman codebook generated from a huffman tree
 string huffmanEncoding(string input, map<string, string> codebook) {
     string encoding = "";
     for (char x : input) {
@@ -210,6 +222,7 @@ string huffmanEncoding(string input, map<string, string> codebook) {
     return encoding;
 }
 
+// returns a huffman decoded string when given a huffman decodebook generated from a huffman tree
 string huffmanDecoding(string input, map<string, string> decodebook) {
     string decoding = "";
     for (unsigned long i = 0; i < input.size();) {
@@ -226,82 +239,7 @@ string huffmanDecoding(string input, map<string, string> decodebook) {
     return decoding;
 }
 
-void testing() {
-    cout << "Starting Information Theory Midterm\n";
-//    string inputPath = "text/tom.txt";
-//    string outputPath = "text/tom-clean.txt";
-//
-//    cout << "Cleaning Text File " << inputPath << "\n";
-//    cleanTextFile(inputPath, outputPath);
-//    cout << "Cleaned Text File " << inputPath << " to " << outputPath << "\n";
-//
-//    string cleanText;
-//    ifstream cleanTextFile(outputPath);
-//    // for each line in the file remove all non alphabet characters and canalization
-//    string buffer;
-//    while (getline(cleanTextFile, buffer)) {
-//        cleanText += buffer;
-//    }
-//
-//    cout << cleanText << "\n";
-//    map<string, int> frequency = getFrequency(cleanText, 2);
-//    for (auto element: frequency) {
-//        cout << element.first << " " << element.second << "\n";
-//    }
-//    cout << getEntropy(frequency) << "\n";
-
-//    // Lempel Ziv Test
-//    cout << "Input:\n";
-//    string test = "aaabbbaaaaaaaaabababababababba";
-//    cout << test << "\n\n";
-//
-//    cout << "Compressed:\n";
-//    string compressed = lempelZivEncoding(test);
-//    cout << compressed << "\n\n";
-//
-//    cout << "Decompressed:\n";
-//    string decompressed = lempelZivDecoding(compressed);
-//    cout << decompressed << "\n\n";
-
-    map<string, int> frequency = getFrequency("aasdfaascdcs");
-//    vector<pair<string, int>> x;
-//    for (auto element: frequency) {
-//        cout << element.first << " " << element.second << "\n";
-//        x.push_back(pair<string, int>(element.first, element.second));
-//    }
-//    sort(x.begin(), x.end(), [](const pair<string, int> &left, const pair<string, int> &right) {
-//        return left.second < right.second;
-//    });
-//    cout << "\n";
-//    for (auto element: x) {
-//        cout << element.first << " " << element.second << "\n";
-//    }
-//    cout << getEntropy(frequency) << "\n";
-
-//    HuffmanTree huffmanTree = HuffmanTree(frequency);
-//    huffmanTree.print();
-//    map<string, string> codebook;
-//    huffmanTree.getCodebook(huffmanTree.root, "", codebook);
-//    cout << "\nCodebook\n";
-//    for (auto element : codebook) {
-//        cout << element.first << " " << element.second << "\n";
-//    }
-//
-//    for (auto element : huffmanTree.getDecodebook()) {
-//        cout << element.first << " " << element.second << "\n";
-//    }
-//
-//    string input = "aasdfaascdcs";
-//    cout << "Input: " << "\n";
-//    cout << input << "\n";
-//    cout << "Compressed: " << "\n";
-//    string compressed = huffmanEncoding(input);
-//    cout << compressed << "\n";
-//    cout << "Decompressed: " << "\n";
-//    string decompressed = huffmanDecoding(compressed, huffmanTree.getDecodebook());
-//    cout << decompressed << "\n";
-}
-
+// gets all the text from a given text file
 string getTextFromFile(string filepath) {
     // open the input file
     ifstream inputTextFile(filepath, ios::in|ios::ate);
@@ -321,6 +259,7 @@ string getTextFromFile(string filepath) {
     return outputData;
 }
 
+// outputs the values of a given frequency to the console
 void printFrequency(map<string, int> frequency) {
     for (const auto& element : frequency) {
         cout << element.first << ", " << element.second << "\n";
@@ -328,6 +267,7 @@ void printFrequency(map<string, int> frequency) {
     cout << "\n";
 }
 
+// determines if a given input string is english or french
 bool isEnglish(string englishReference, string frenchReference, string input) {
     map<string, int> englishFrequency = getFrequency(englishReference);
     map<string, int> frenchFrequency = getFrequency(frenchReference);
@@ -338,6 +278,7 @@ bool isEnglish(string englishReference, string frenchReference, string input) {
     return relativeEntropyToEnglish < relativeEntropyToFrench;
 }
 
+// main function attempts to show work for all the questions on the information theory midterm
 int main() {
     cout << "Starting Information Theory Midterm\n\n";
     string tomPath = "text/tom.txt";
@@ -359,7 +300,6 @@ int main() {
     cout << "Retrieving Cleaned Text Files\n\n";
     string tomCleanText = getTextFromFile(tomCleanPath);
     string germaineCleanText = getTextFromFile(germainCleanPath);
-    //tomCleanText = "aaaaaaaaabbbbbbbbbbbbbbbbbbccccccccc";
 
     // Frequency Calculations
     cout << "Calculating Frequencies\n\n";
@@ -382,14 +322,57 @@ int main() {
     cout << "Bigram Entropy           : " << tomBiGramEntropy << " bits per bigram\n";
     cout << "TriGram Entropy          : " << tomTriGramEntropy << " bits per trigram\n\n";
 
-    double treeBuildTime = 0;
-    double encodeTime = 0;
-    double decodeTime = 0;
+    cout << "Calculating Lempel-Ziv Stuff:\n";
+    double lempelZivEncodeTime = 0;
+    double lempelZivDecodeTime = 0;
 
-    double cps = CLOCKS_PER_SEC;
     clock_t begin = clock();
-    HuffmanTree tomHuffmanTree = HuffmanTree(tomSingleCharacterFrequency);
+    string tomLempelZivEncoded = lempelZivEncoding(tomCleanText);
     clock_t end = clock();
+    lempelZivEncodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
+    begin = clock();
+    string tomLempelZivDecoded = lempelZivDecoding(tomLempelZivEncoded);
+    end = clock();
+    lempelZivEncodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
+
+    cout << "Saved Lempel Ziv Encoded File to " << lempelZivOutputPath << "\n\n";
+    writeStringToFile(lempelZivOutputPath, tomLempelZivEncoded);
+
+    if (tomCleanText.length() > 50) {
+        cout << "Note: The input was to long to display fully here.\n";
+        cout << "Input   : " << tomCleanText.substr(0, 50) << "...\n";
+        cout << "Encoded : " << tomLempelZivEncoded.substr(0, 50) << "...\n";
+        cout << "Decoded : " << tomLempelZivDecoded.substr(0, 50) << "...\n";
+    } else {
+        cout << "Input   : " << tomCleanText << "\n";
+        cout << "Encoded : " << tomLempelZivEncoded << "\n";
+        cout << "Decoded : " << tomLempelZivDecoded << "\n";
+    }
+    cout << "\n";
+
+    unsigned long inputSize = tomCleanText.length() * 8;
+    unsigned long encodedSize = tomLempelZivEncoded.length() * 8;
+    double compressionRatio = (double) encodedSize / (double) inputSize;
+    float encodedEntropy = getEntropy(getFrequency(tomLempelZivEncoded));
+    cout << "Lempel Ziv Data:\n";
+    cout << "Input Size         : " << inputSize << " bits\n";
+    cout << "Encoded Size       : " << encodedSize << " bits\n";
+    cout << "Compression Ratio  : " << compressionRatio << "\n";
+    cout << "Input Entropy      : " << tomSingleCharacterEntropy << " bits per character\n";
+    cout << "Encoded Entropy    : " << encodedEntropy << " bits per character\n";
+    cout << "Encode Time        : " << lempelZivEncodeTime << " milliseconds\n";
+    cout << "Decode Time        : " << lempelZivDecodeTime << " milliseconds\n";
+    cout << "\n";
+
+
+    cout << "Calculating Huffman Stuff:\n";
+    double treeBuildTime = 0;
+    double huffmanEncodeTime = 0;
+    double huffmanDecodeTime = 0;
+
+    begin = clock();
+    HuffmanTree tomHuffmanTree = HuffmanTree(tomSingleCharacterFrequency);
+    end = clock();
     treeBuildTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
     cout << "Huffman Tree:\n";
     tomHuffmanTree.print();
@@ -399,11 +382,11 @@ int main() {
     begin = clock();
     string tomHuffmanEncoded = huffmanEncoding(tomCleanText, codebook);
     end = clock();
-    encodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
+    huffmanEncodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
     begin = clock();
     string tomHuffmanDecoded = huffmanDecoding(tomHuffmanEncoded, decodebook);
     end = clock();
-    decodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
+    huffmanDecodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
     cout << "Codebook:\n";
     tomHuffmanTree.printCodeBook();
     cout << "\n";
@@ -423,10 +406,10 @@ int main() {
     }
     cout << "\n";
 
-    unsigned long inputSize = tomCleanText.length() * 8;
-    unsigned long encodedSize = tomHuffmanEncoded.length();
-    double compressionRatio = (double) encodedSize / (double) inputSize;
-    float encodedEntropy = getEntropy(getFrequency(tomHuffmanEncoded));
+    inputSize = tomCleanText.length() * 8;
+    encodedSize = tomHuffmanEncoded.length();
+    compressionRatio = (double) encodedSize / (double) inputSize;
+    encodedEntropy = getEntropy(getFrequency(tomHuffmanEncoded));
     cout << "Huffman Data:\n";
     cout << "Input Size         : " << inputSize << " bits\n";
     cout << "Encoded Size       : " << encodedSize << " bits\n";
@@ -434,10 +417,11 @@ int main() {
     cout << "Input Entropy      : " << tomSingleCharacterEntropy << " bits per character\n";
     cout << "Encoded Entropy    : " << encodedEntropy << " bits per character\n";
     cout << "Tree Build Time    : " << treeBuildTime << " milliseconds\n";
-    cout << "Encode Time        : " << encodeTime << " milliseconds\n";
-    cout << "Decode Time        : " << decodeTime << " milliseconds\n";
+    cout << "Encode Time        : " << huffmanEncodeTime << " milliseconds\n";
+    cout << "Decode Time        : " << huffmanDecodeTime << " milliseconds\n";
     cout << "\n";
 
+    cout << "Language Dection:\n";
     string englishTest1 = "In the Pride Lands of Africa, a lion rules over the animal kingdom from Pride Rock. King "
             "Mufasa and Queen Sarabi's newborn son, Simba, is presented to the assembled animals by Rafiki, a mandrill "
             "who serves as shaman and advisor. Months later, Mufasa shows young Simba the Pride Lands and explains to him "
@@ -447,6 +431,7 @@ int main() {
             "are attacked by three spotted hyenas who are in league with Scar. Mufasa is alerted to the danger by his majordomo, "
             "the hornbill Zazu, and rescues the cubs. Though angry with Simba, Mufasa forgives him and explains that the great "
             "kings of the past watch over them from the night sky, from which he will one day watch over Simba.";
+
     string frenchTest1 = "Dans la savane africaine, tous les animaux de la Terre des Lions se sont réunis pour célébrer "
             "la naissance du prince Simba, fils du roi Mufasa et de la reine Sarabi. Tous, sauf Scar, frère cadet de Mufasa, "
             "pour qui la naissance de cet héritier anéantit tous ses espoirs d'accéder un jour au pouvoir. Avec la collaboration "
@@ -470,6 +455,4 @@ int main() {
     } else {
         cout << "Is French\n\n";
     }
-
-    cout << "Hey I did not crash" << std::endl;
 }
