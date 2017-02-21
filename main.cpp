@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <regex>
 #include <iomanip>
+#include <ctime>
 #include "HuffmanTree.h"
 
 // using statements
@@ -59,6 +60,22 @@ void cleanTextFile(string inputPath, string outputPath) {
     outputFile.close();
 }
 
+string cleanText(string input) {
+    string output;
+    for(char& x : input) {
+        if(isalpha(x)) {
+            output += tolower(x);
+        }
+    }
+    return output;
+}
+
+void writeStringToFile(string outputPath, string outputData) {
+    ofstream outputFile(outputPath, ios::trunc);
+    outputFile << outputData << "\n";
+    outputFile.close();
+}
+
 map<string, int> getFrequency(string input, const unsigned long nGrams = 1) {
     map<string, int> frequency;
     for (unsigned int i = 0; i < input.length(); i += nGrams) {
@@ -79,13 +96,28 @@ int getTotalOccurrences(map<string, int> frequency) {
 float getEntropy(map<string, int> frequency) {
     float entropy = 0.0f;
 
-    const int total = getTotalOccurrences(frequency);
+    const float total = getTotalOccurrences(frequency);
 
     for (const auto& element: frequency) {
-        float probabilityOfElement = element.second / (float) total;
+        float probabilityOfElement = element.second / total;
         entropy += probabilityOfElement * log2(probabilityOfElement);
     }
     return -1 * entropy;
+}
+
+float getRelativeEntropy(map<string, int> frequencyP, map<string, int> frequencyQ) {
+    float relativeEntropy = 0.0f;
+    const float totalP = getTotalOccurrences(frequencyP);
+    const float totalQ = getTotalOccurrences(frequencyQ);
+    for (const auto& element : frequencyQ) {
+        const int currentQOccurrences = element.second;
+        auto tempOccurence = frequencyP[element.first];
+        const int currentPOccurrences = tempOccurence;
+        const float probabilityP = currentPOccurrences / totalP;
+        const float probabilityQ = currentQOccurrences / totalQ;
+        relativeEntropy += probabilityP * (probabilityP / probabilityQ);
+    }
+    return relativeEntropy;
 }
 
 vector<string> split(string input, const regex regexPattern) {
@@ -194,7 +226,6 @@ string huffmanDecoding(string input, map<string, string> decodebook) {
     return decoding;
 }
 
-
 void testing() {
     cout << "Starting Information Theory Midterm\n";
 //    string inputPath = "text/tom.txt";
@@ -297,18 +328,37 @@ void printFrequency(map<string, int> frequency) {
     cout << "\n";
 }
 
+bool isEnglish(string englishReference, string frenchReference, string input) {
+    map<string, int> englishFrequency = getFrequency(englishReference);
+    map<string, int> frenchFrequency = getFrequency(frenchReference);
+    string cleanedInput = cleanText(input);
+    map<string, int> inputFrequency = getFrequency(cleanedInput);
+    float relativeEntropyToEnglish = getRelativeEntropy(englishFrequency, inputFrequency);
+    float relativeEntropyToFrench = getRelativeEntropy(frenchFrequency, inputFrequency);
+    return relativeEntropyToEnglish < relativeEntropyToFrench;
+}
+
 int main() {
     cout << "Starting Information Theory Midterm\n\n";
-    string inputPath = "text/tom.txt";
-    string outputPath = "text/tom-clean.txt";
+    string tomPath = "text/tom.txt";
+    string tomCleanPath = "text/tom-clean.txt";
+    string germainPath = "text/germaine.txt";
+    string germainCleanPath = "text/germain-clean.txt";
+    string huffmanOutputPath = "text/tom-huffman.txt";
+    string lempelZivOutputPath = "text/tom-lempelziv.txt";
 
-    cout << "Cleaning Text File " << inputPath << "\n\n";
-    cleanTextFile(inputPath, outputPath);
-    cout << "Cleaned Text File " << inputPath << " to " << outputPath << "\n\n";
+    cout << "Cleaning Text File " << tomPath << "\n\n";
+    cleanTextFile(tomPath, tomCleanPath);
+    cout << "Cleaned Text File " << tomPath << " to " << tomCleanPath << "\n\n";
+
+    cout << "Cleaning Text File " << germainPath << "\n\n";
+    cleanTextFile(germainPath, germainCleanPath);
+    cout << "Cleaned Text File " << germainPath << " to " << germainCleanPath << "\n\n";
 
     // Clean Tom Text
-    cout << "Retrieving Cleaned Text File\n\n";
-    string tomCleanText = getTextFromFile(outputPath);
+    cout << "Retrieving Cleaned Text Files\n\n";
+    string tomCleanText = getTextFromFile(tomCleanPath);
+    string germaineCleanText = getTextFromFile(germainCleanPath);
     //tomCleanText = "aaaaaaaaabbbbbbbbbbbbbbbbbbccccccccc";
 
     // Frequency Calculations
@@ -332,17 +382,34 @@ int main() {
     cout << "Bigram Entropy           : " << tomBiGramEntropy << " bits per bigram\n";
     cout << "TriGram Entropy          : " << tomTriGramEntropy << " bits per trigram\n\n";
 
+    double treeBuildTime = 0;
+    double encodeTime = 0;
+    double decodeTime = 0;
+
+    double cps = CLOCKS_PER_SEC;
+    clock_t begin = clock();
     HuffmanTree tomHuffmanTree = HuffmanTree(tomSingleCharacterFrequency);
+    clock_t end = clock();
+    treeBuildTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
     cout << "Huffman Tree:\n";
     tomHuffmanTree.print();
     cout << "\n";
     map<string, string> codebook = tomHuffmanTree.getCodebook();
     map<string, string> decodebook = tomHuffmanTree.getDecodebook();
+    begin = clock();
     string tomHuffmanEncoded = huffmanEncoding(tomCleanText, codebook);
+    end = clock();
+    encodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
+    begin = clock();
     string tomHuffmanDecoded = huffmanDecoding(tomHuffmanEncoded, decodebook);
+    end = clock();
+    decodeTime = (((double) end - (double) begin) / (double) CLOCKS_PER_SEC) * 1000;
     cout << "Codebook:\n";
     tomHuffmanTree.printCodeBook();
     cout << "\n";
+
+    cout << "Saved Huffman Encoded File to " << huffmanOutputPath << "\n\n";
+    writeStringToFile(huffmanOutputPath, tomHuffmanEncoded);
 
     if (tomCleanText.length() > 50) {
         cout << "Note: The input was to long to display fully here.\n";
@@ -365,10 +432,44 @@ int main() {
     cout << "Encoded Size       : " << encodedSize << " bits\n";
     cout << "Compression Ratio  : " << compressionRatio << "\n";
     cout << "Input Entropy      : " << tomSingleCharacterEntropy << " bits per character\n";
-    cout << "Encoded Entropy    : " << encodedEntropy << "bits per character\n";
-    cout << "Compression Time   : " << "\n";
-    cout << "Decompression Time : " << "\n";
+    cout << "Encoded Entropy    : " << encodedEntropy << " bits per character\n";
+    cout << "Tree Build Time    : " << treeBuildTime << " milliseconds\n";
+    cout << "Encode Time        : " << encodeTime << " milliseconds\n";
+    cout << "Decode Time        : " << decodeTime << " milliseconds\n";
     cout << "\n";
 
-    cout << "Hey I did not crash\n";
+    string englishTest1 = "In the Pride Lands of Africa, a lion rules over the animal kingdom from Pride Rock. King "
+            "Mufasa and Queen Sarabi's newborn son, Simba, is presented to the assembled animals by Rafiki, a mandrill "
+            "who serves as shaman and advisor. Months later, Mufasa shows young Simba the Pride Lands and explains to him "
+            "the responsibilities of kingship and the \"circle of life\" which connects all living things. Mufasa's younger "
+            "brother, Scar, covets the throne and plots to eliminate Mufasa and Simba so he may become king. He tricks Simba "
+            "and his best friend Nala—to whom Simba is betrothed—into exploring a forbidden elephants' graveyard, where they "
+            "are attacked by three spotted hyenas who are in league with Scar. Mufasa is alerted to the danger by his majordomo, "
+            "the hornbill Zazu, and rescues the cubs. Though angry with Simba, Mufasa forgives him and explains that the great "
+            "kings of the past watch over them from the night sky, from which he will one day watch over Simba.";
+    string frenchTest1 = "Dans la savane africaine, tous les animaux de la Terre des Lions se sont réunis pour célébrer "
+            "la naissance du prince Simba, fils du roi Mufasa et de la reine Sarabi. Tous, sauf Scar, frère cadet de Mufasa, "
+            "pour qui la naissance de cet héritier anéantit tous ses espoirs d'accéder un jour au pouvoir. Avec la collaboration "
+            "des hyènes, Scar imagine plusieurs plans diaboliques pour anéantir son frère et son neveu. Malgré un premier "
+            "échec, il parvient à éliminer Mufasa et persuade Simba qu'il est responsable de la mort de son père pour le "
+            "contraindre à s'enfuir et ainsi en faire la proie de ses hyènes. Bien que parvenant à s'échapper, Simba "
+            "finit à bout de forces dans le désert. Il est secouru par Timon le suricate et Pumbaa le phacochère, avec "
+            "lesquels il va se reconstruire et grandir, en se nourrissant de larves et en suivant une nouvelle "
+            "philosophie de vie : Hakuna matata, c'est-à-dire, vivre sans souci, au jour le jour.";
+
+    cout << "The following text:\n" << "\"" << englishTest1 << "\"\n";
+    if(isEnglish(tomCleanText, germaineCleanText, englishTest1)) {
+        cout << "Is English\n\n";
+    } else {
+        cout << "Is French\n\n";
+    }
+
+    cout << "The following text:\n" << "\"" << frenchTest1 << "\"\n";
+    if(isEnglish(tomCleanText, germaineCleanText, frenchTest1)) {
+        cout << "Is English\n\n";
+    } else {
+        cout << "Is French\n\n";
+    }
+
+    cout << "Hey I did not crash" << std::endl;
 }
